@@ -5,14 +5,12 @@
 When a deposit is detected but not credited in time, this service sends automatic Telegram alerts.
 
 Built for crypto & fintech backends.
-Webhook-based service that detects silent failures.
 
 ---
 
-## ❓ What problem does it solve?
+## ❓ Problem
 
-In payment systems, deposits may be detected
-but silently fail to be credited to user balances.
+In payment systems, deposits may be detected but silently fail to be credited to user balances.
 
 This leads to:
 - users waiting indefinitely
@@ -21,12 +19,13 @@ This leads to:
 
 ---
 
-## ✅ What does this service do?
+## ✅ Solution
 
-- Listens for deposit events
-- Tracks each deposit by deposit_id
-- Sends Telegram alerts if a deposit is not credited in time
-- Cancels alerts once the deposit is credited
+This service:
+- listens for deposit events via webhook
+- tracks each deposit by `deposit_id`
+- sends Telegram alerts if a deposit is not credited in time
+- cancels alerts once the deposit is credited
 
 ---
 
@@ -34,21 +33,35 @@ This leads to:
 
 ### POST /deposit-detected
 
-Request body:
+**Request body:**
 ```json
 {
   "deposit_id": "abc123",
   "credited": false
 }
 
----
+credited = false → schedules alert
 
-## ⚙️ Environment variables
+credited = true → cancels alert
 
-The service requires a .env file with Telegram and Redis configuration.
+⚙️ Environment variables
 
----
+Create a .env file based on .env.example:
 
-## 🧪 Status
+TG_BOT_TOKEN=your_telegram_bot_token
+TG_CHAT_ID=your_chat_id
+REDIS_URL=redis://localhost:6379
+PORT=3000
+
+🚀 Run locally
+
+npm install
+node server.js
+
+🧪 Status
 
 MVP. Actively developed.
+
+This project was built as a minimal production-ready detector for silent failures.
+
+Feedback and ideas are welcome.
