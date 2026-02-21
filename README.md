@@ -1,7 +1,11 @@
 # Deposit Silent Failure Detector
 
-Webhook-based service that detects silent failures
-when deposits are detected but not credited in time.
+🚨 Detects silent deposit failures in payment systems.
+
+When a deposit is detected but not credited in time, this service sends automatic Telegram alerts.
+
+Built for crypto & fintech backends.
+Webhook-based service that detects silent failures.
 
 ---
 
