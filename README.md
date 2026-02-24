@@ -1,67 +1,137 @@
-# Deposit Silent Failure Detector
+# Silent Failure Detector
 
-🚨 Detects silent deposit failures in payment systems.
+A minimal monitoring service that detects silent failures in operational workflows
+and notifies humans when expected actions do not occur within a defined time window.
 
-When a deposit is detected but not credited in time, this service sends automatic Telegram alerts.
+This tool is designed to answer a simple but critical question:
 
-Built for crypto & fintech backends.
-
----
-
-## ❓ Problem
-
-In payment systems, deposits may be detected but silently fail to be credited to user balances.
-
-This leads to:
-- users waiting indefinitely
-- missing alerts
-- delayed support reaction
+> “Something was expected to happen. It didn’t. Should a human take a look?”
 
 ---
 
-## ✅ Solution
+## What problem does it solve?
 
-This service:
-- listens for deposit events via webhook
-- tracks each deposit by `deposit_id`
-- sends Telegram alerts if a deposit is not credited in time
-- cancels alerts once the deposit is credited
+In many systems and business processes, failures are silent:
+- no error is thrown
+- no exception is raised
+- no alert is triggered
+
+An event is detected, but the follow-up action never happens.
+
+Examples:
+- a deposit is detected, but never credited
+- a job is created, but never completed
+- a request is accepted, but never processed
+- an operation starts, but never finishes
+
+This tool monitors such situations and raises a signal only if the silence lasts too long.
 
 ---
 
-## 🔌 API
+## How it works (conceptually)
 
-### POST /deposit-detected
+1. An event is reported (e.g. “deposit detected”)
+2. The system starts a timer
+3. If confirmation arrives in time → nothing happens
+4. If confirmation does not arrive → an alert is sent
 
-**Request body:**
-```json
+There is no polling, no guessing, no heuristics.  
+Just explicit signals and explicit timeouts.
+
+---
+
+## Design principles
+
+This tool is intentionally non-autonomous.
+
+- It does not retry operations
+- It does not fix or modify external systems
+- It does not make decisions on behalf of humans
+- It performs no irreversible actions
+
+Its only responsibility is to signal potential risk early
+and keep all decisions under explicit human control.
+
+This design avoids risks inherent to fully autonomous agents
+in financial and operational workflows.
+
+---
+
+## What this tool is NOT
+
+- ❌ not an auto-healing system
+- ❌ not a workflow engine
+- ❌ not an AI agent
+- ❌ not a business process manager
+
+It is a monitoring primitive, meant to be composed with other systems.
+
+---
+
+## Typical use cases
+
+- Financial operations monitoring
+- Background job supervision
+- Operational SLA enforcement
+- Human-in-the-loop workflows
+- Early warning systems
+- Internal tooling and MVPs
+
+---
+
+## Tech stack
+
+- Node.js
+- Express
+- Redis (timers / TTL)
+- Telegram Bot API (notifications)
+- PM2 (process management)
+
+---
+
+## Configuration
+
+Environment variables (`.env`):
+
+```env
+PORT=3000
+REDIS_URL=redis://127.0.0.1:6379
+TG_BOT_TOKEN=your_bot_token
+TG_CHAT_ID=your_chat_id
+
+---
+
+## API example
+
+### Schedule monitoring
+
+```http
+POST /deposit-detected
+Content-Type: application/json
 {
   "deposit_id": "abc123",
   "credited": false
 }
+## Cancel monitoring (success case)
 
-credited = false → schedules alert
+POST /deposit-detected
+Content-Type: application/json
+{
+  "deposit_id": "abc123",
+  "credited": true
+}
 
-credited = true → cancels alert
+If confirmation does not arrive within the configured time window,
+a notification is sent.
 
-⚙️ Environment variables
+##Why this approach?
 
-Create a .env file based on .env.example:
+Because in real operations:
+ • not every delay is an error
+ • not every error should be auto-fixed
+ • human context still matters
 
-TG_BOT_TOKEN=your_telegram_bot_token
-TG_CHAT_ID=your_chat_id
-REDIS_URL=redis://localhost:6379
-PORT=3000
+This tool respects that boundary.
 
-🚀 Run locally
-
-npm install
-node server.js
-
-🧪 Status
-
-MVP. Actively developed.
-
-This project was built as a minimal production-ready detector for silent failures.
-
-Feedback and ideas are welcome.
+It does not compete with autonomous systems or AI agents.
+It complements them by making silent failures visible.
