@@ -88,19 +88,6 @@ It is a monitoring primitive, meant to be composed with other systems.
 - PM2 (process management)
 
 ---
-
-## Configuration
-
-Environment variables (`.env`):
-
-```env
-PORT=3000
-REDIS_URL=redis://127.0.0.1:6379
-TG_BOT_TOKEN=your_bot_token
-TG_CHAT_ID=your_chat_id
-
----
-
 ## API example
 
 ### Schedule monitoring
@@ -112,26 +99,5 @@ Content-Type: application/json
   "deposit_id": "abc123",
   "credited": false
 }
-## Cancel monitoring (success case)
 
-POST /deposit-detected
-Content-Type: application/json
-{
-  "deposit_id": "abc123",
-  "credited": true
-}
 
-If confirmation does not arrive within the configured time window,
-a notification is sent.
-
-##Why this approach?
-
-Because in real operations:
- • not every delay is an error
- • not every error should be auto-fixed
- • human context still matters
-
-This tool respects that boundary.
-
-It does not compete with autonomous systems or AI agents.
-It complements them by making silent failures visible.
