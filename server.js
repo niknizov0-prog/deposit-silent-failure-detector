@@ -1,3 +1,4 @@
+console.log("REDIS_URL:", process.env.REDIS_URL);
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
