@@ -1,4 +1,4 @@
-# 🛡️ Silent Failure Detector
+# 🛡️ Simple webhook-based silent deposit failure detector
 
 A minimal monitoring service that detects **silent failures** in operational workflows  
 and notifies humans when expected actions do not occur within a defined time window.
