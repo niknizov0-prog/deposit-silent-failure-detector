@@ -116,6 +116,16 @@ async function sendAlert(deposit_id, level) {
   }
 }
 
+// Простая главная страница
+app.get('/', (req, res) => {
+  res.send(`
+    <h1>🔴 Silent Deposit Failure Detector</h1>
+    <p>Сервис работает.</p>
+    <p>POST на <code>/deposit-detected</code> с полями <code>deposit_id</code> и <code>credited</code></p>
+    <p>Пример использования смотри в README</p>
+  `);
+});
+
 // === ЗАПУСК СЕРВЕРА ===
 const PORT = process.env.PORT || 8080;
 
