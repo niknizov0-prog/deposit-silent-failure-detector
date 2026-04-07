@@ -98,14 +98,14 @@ async function sendAlert(deposit_id, level) {
     return;
   }
 
-  const url = https://api.telegram.org/bot${token}/sendMessage;
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
     const response = await axios.post(url, {
       chat_id: chatId,
-      text: 🔴 Silent failure detected (level ${level})\n\n +
+      text: `🔴 Silent failure detected (level ${level})\n\n +
             Deposit not credited in time\n +
-            Deposit ID: ${deposit_id},
+            Deposit ID: ${deposit_id}`,
       parse_mode: 'HTML'
     });
 
