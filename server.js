@@ -101,11 +101,11 @@ async function sendAlert(deposit_id, level) {
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
-    const response = await axios.post(url, {
+    await axios.post(url, {
       chat_id: chatId,
-      text: `🔴 Silent failure detected (level ${level})\n\n +
-            Deposit not credited in time\n +
-            Deposit ID: ${deposit_id}`,
+      text: `🔴 Silent failure detected (level ${level})\n\n` +
+            `Deposit not credited in time\n` +
+            `Deposit ID: ${deposit_id}`,
       parse_mode: 'HTML'
     });
 
@@ -115,3 +115,10 @@ async function sendAlert(deposit_id, level) {
     console.error('Telegram alert failed:', JSON.stringify(errorData));
   }
 }
+
+// === ЗАПУСК СЕРВЕРА ===
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+  console.log(`🚀 MVP silent failure detector running on port ${PORT}`);
+});
