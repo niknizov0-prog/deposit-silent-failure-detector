@@ -9,6 +9,19 @@ app.use(express.json());
 
 const redis = new Redis(process.env.REDIS_URL); // REDIS_URL = redis://127.0.0.1:6379
 
+redis.on('error', (err) => {
+  console.error('Redis Client Error:', err.message);
+  // Не падаем, просто логируем
+});
+
+redis.on('connect', () => {
+  console.log('✅ Successfully connected to Redis');
+});
+
+redis.on('ready', () => {
+  console.log('✅ Redis is ready');
+});
+
 const ESCALATION = [
   { level: 1, delay: 10 }, // через 10 сек
   { level: 2, delay: 40 }  // через 40 сек после webhook
