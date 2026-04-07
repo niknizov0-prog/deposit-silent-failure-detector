@@ -86,22 +86,32 @@ setInterval(async () => {
 }, 5000);
 
 async function sendAlert(deposit_id, level) {
+  const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
+  const chatId = process.env.TELEGRAM_CHAT_ID?.trim();
+
+  if (!token) {
+    console.error('❌ TELEGRAM_BOT_TOKEN is missing or empty');
+    return;
+  }
+  if (!chatId) {
+    console.error('❌ TELEGRAM_CHAT_ID is missing or empty');
+    return;
+  }
+
+  const url = https://api.telegram.org/bot${token}/sendMessage;
+
   try {
-    await axios.post(
-      `https://api.telegram.org/bot${process.env.TG_BOT_TOKEN}/sendMessage`,
-      {
-        chat_id: process.env.TG_CHAT_ID,
-        text: `🚨 Silent failure detected (level ${level})\nDeposit not credited in time\nDeposit ID: ${deposit_id}`
-      }
-    );
-    console.log(`Alert level ${level} sent for deposit ${deposit_id}`);
-  } catch (err) {
-    console.error('Telegram alert failed:', err.message);
+    const response = await axios.post(url, {
+      chat_id: chatId,
+      text: 🔴 Silent failure detected (level ${level})\n\n +
+            Deposit not credited in time\n +
+            Deposit ID: ${deposit_id},
+      parse_mode: 'HTML'
+    });
+
+    console.log(`✅ Telegram alert level ${level} sent for deposit ${deposit_id}`);
+  } catch (error) {
+    const errorData = error.response?.data || error.message;
+    console.error('Telegram alert failed:', JSON.stringify(errorData));
   }
 }
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`MVP silent failure detector running on port ${PORT}`);
-});
-
