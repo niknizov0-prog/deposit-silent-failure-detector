@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Silent Failure Guardian — Detecta lo que mata tu negocio en silencio</title>
+<meta name="description" content="Webhooks caídos, pagos perdidos, automatizaciones muertas. Lo detectamos antes que tus clientes." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:         #090910;
+  --bg2:        #0f0f18;
+  --bg3:        #14141e;
+  --bg4:        #191926;
+  --border:     rgba(255,255,255,0.07);
+  --border-y:   rgba(250,204,21,0.35);
+  --yellow:     #FACC15;
+  --yellow-dim: rgba(250,204,21,0.10);
+  --yellow-glow: 0 0 28px #facc1559;
+  --white:      #FFFFFF;
+  --gray1:      #E4E4E7;
+  --gray2:      #A1A1AA;
+  --gray3:      #52525B;
+  --red:        #F87171;
+  --red-dim:    rgba(248,113,113,0.12);
+  --red-border: rgba(248,113,113,0.25);
+  --green:      #4ADE80;
+  --green-dim:  rgba(74,222,128,0.10);
+  --orange:     #FF9236;
+
+  --t-xs:   clamp(12px, 2.7vw, 13px);
+  --t-sm:   clamp(13px, 3vw, 14px);
+  --t-base: clamp(15px, 2.2vw, 17px);
+  --t-lg:  clamp(17px, 2.2vw, 20px);
+  --t-xl:  clamp(21px, 3vw, 25px);
+  --t-2xl: clamp(28px, 5vw, 38px);
+  --t-3xl: clamp(34px, 6vw, 56px);
+  --t-4xl: clamp(38px, 7.5vw, 68px);
+
+  --s-xs: 8px;
+  --s-sm: 14px;
+  --s-md:  clamp(20px, 3vw, 32px);
+  --s-lg:  clamp(35px, 5vw, 50px);
+  --s-xl:  clamp(60px, 9vw, 110px);
+
+  --t-fast: 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+  --t-med:  0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  --t-slow: 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background-color: var(--bg);
+  color: var(--gray1);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  font-size: var(--t-base);
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 32px 32px; pointer-events: none; z-index: 0;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 clamp(16px, 5vw, 36px); position: relative; z-index: 1; }
+section { padding: var(--s-xl) 0; border-top: 1px solid var(--border); }
+#hero { border-top: none; padding-top: clamp(80px, 12vw, 130px); }
+/* Typography, buttons, cards, terminal, reveal, etc. remain unchanged ... */
+/* See original for full CSS if needed */
+h1, h2, h3 { font-family: 'Syne', sans-serif; color: var(--white); letter-spacing: -0.025em; line-height: 1.07; }
+h1 { font-size: var(--t-4xl); font-weight: 800; margin-bottom: var(--s-md); }
+h2 { font-size: var(--t-3xl); font-weight: 700; margin-bottom: var(--s-md); }
+.accent { color: var(--yellow); text-shadow: 0 0 30px rgba(250, 204, 21, 0.2); }
+.label {
+  font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  text-transform: uppercase; color: var(--yellow); display: inline-flex;
+  align-items: center; gap: 10px; margin-bottom: 16px;
+}
+.label::before { content: ''; width: 20px; height: 1px; background: var(--yellow); opacity: 0.5; }
+/* ... [rest of the style unchanged] ... */
+nav {
+  position: sticky; top: 0; z-index: 1000;
+  background: rgba(9,9,16,0.85); 
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner { height: 62px; display: flex; align-items: center; justify-content: space-between; }
+.btn-primary {
+  background: var(--yellow); color: #000; padding: 14px 28px; border-radius: 8px;
+  font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s;
+  border: none;
+  cursor: pointer;
+}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(250, 204, 21, 0.4); }
+.btn-secondary {
+  border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.04);
+  color: var(--gray1); padding: 13px 24px; border-radius: 8px;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); transform: translateY(-1px); }
+.card {
+  background: var(--bg2); border: 1px solid var(--border); padding: 32px;
+  border-radius: 14px; transition: all 0.4s var(--ease); position: relative; overflow: hidden;
+}
+.card:hover {
+  transform: translateY(-10px) scale(1.02);
+  border-color: rgba(250, 204, 21, 0.3);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+}
+.plan-card {
+  position: relative;
+}
+.plan-card.pro {
+  overflow: visible !important;
+}
+.plan-badge {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--orange);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  padding: 4px 15px;
+  border-radius: 20px;
+  box-shadow: 0 4px 18px #ff923630;
+  z-index: 2;
+}
+.trust-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 30px;
+  margin-top: -10px;
+}
+.trust-avatars {
+  display: flex;
+  align-items: center;
+}
+/* replaced .trust-avatars svg by real avatar images */
+.trust-avatars img {
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  margin-left: -8px;
+  flex-shrink: 0;
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  background: #27273c;
+  box-shadow: 0 2px 9px rgba(0,0,0,0.09);
+}
+.trust-avatars img:first-child { margin-left: 0; }
+.trust-plus {
+  color: var(--gray2);
+  font-size: 13px;
+  margin-left: 18px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+}
+section-alt {
+  background: var(--bg4);
+  border-top: 1px solid var(--border-y);
+}
+.section-alt {
+  background: var(--bg4);
+  border-top: 1px solid var(--border-y);
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px;
+  margin-bottom: 12px;
+}
+.metric-card {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: 13px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  transition: border-color .21s, box-shadow .24s;
+}
+.metric-card:hover {
+  border-color: var(--yellow);
+  box-shadow: 0 6px 25px rgba(250,204,21,0.06);
+}
+.metric-value {
+  font-size: var(--t-2xl);
+  color: var(--yellow);
+  font-weight: 700;
+  font-family: 'JetBrains Mono',monospace;
+  margin-bottom: 8px;
+  text-shadow: var(--yellow-glow);
+}
+.metric-label {
+  font-size: var(--t-sm);
+  color: var(--gray2);
+}
+.urgency-block {
+  margin: 0 0 28px 0;
+  display: grid;
+  gap: 10px;
+}
+.urgency-row {
+  display: flex;
+  align-items: center;
+  background: var(--red-dim);
+  border: 1px solid var(--red-border);
+  border-radius: 8px;
+  color: var(--red);
+  padding: 11px 18px;
+  font-size: 15px;
+  font-family: 'JetBrains Mono',monospace;
+  gap: 12px;
+  font-weight: 500;
+}
+.urgency-row svg {
+  flex: none;
+  width: 17px; height: 17px;
+}
+.urgency-highlight {
+  background: var(--green-dim);
+  border: 1px solid var(--green);
+  color: var(--green);
+  box-shadow: 0 0 18px var(--green-dim);
+  font-weight:700;
+}
+.log-box {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden; font-family: 'JetBrains Mono', monospace; margin-top: 40px;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+}
+.log-chrome { background: var(--bg3); padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+.log-dots { display: flex; gap: 6px; margin-right: 12px; }
+.log-dots span { width: 10px; height: 10px; border-radius: 50%; display:inline-block; }
+.log-dots span:nth-child(1) { background: #ff5f57; }
+.log-dots span:nth-child(2) { background: #febc2e; }
+.log-dots span:nth-child(3) { background: #28c840; }
+.log-body { padding: 20px; min-height: 180px; font-size: 13px; display: block }
+@media (max-width: 600px) { 
+  .log-body { min-height: 160px; }
+}
+.log-line { opacity: 0; transform: translateY(5px); margin-bottom: 8px; transition: opacity 0.3s var(--ease), transform 0.3s var(--ease); }
+.log-line.visible { opacity: 1; transform: translateY(0); }
+.badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 8px; display:inline-block; }
+.badge-ok { background: var(--green-dim); color: var(--green); }
+.badge-err { background: var(--red-dim); color: var(--red); }
+.log-alert {
+  margin-top: 15px; padding: 12px; border-radius: 8px; background: var(--red-dim);
+  border: 1px solid var(--red-border); color: var(--red); font-weight: 700;
+  animation: logIn 0.4s forwards;
+}
+@keyframes logIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+.reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+/* Reveal always visible on mobile */
+@media (max-width: 768px) {
+  .reveal { opacity: 1 !important; transform: none !important; }
+}
+
+/* Responsive Enhancements */
+@media (max-width:600px) {
+  .hero-btns { flex-direction:column !important; }
+  .hero-btns .btn-primary,
+  .hero-btns .btn-secondary {
+    width:100%;
+    justify-content: center;
+  }
+  .pricing-grid { grid-template-columns: 1fr !important; }
+  .plan-card.pro { margin-top: 20px !important; }
+  .footer-inner { flex-direction: column !important; align-items:center !important; text-align:center !important; }
+}
+
+/* Custom responsive block for prompt: */
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px; }
+  h1 { font-size: clamp(32px, 8vw, 48px); }
+  h2 { font-size: clamp(24px, 6vw, 36px); }
+  p { font-size: 15px; }
+  nav .nav-inner > div { gap: 8px; }
+  nav a[style*="font-size:14px"] { display: none; }
+  .hero-btns, div[style*="display:flex; gap:12px"] {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-primary, .btn-secondary {
+    width: 100%;
+    justify-content: center;
+    font-size: 16px;
+    padding: 14px 20px;
+  }
+  .card { padding: 20px; }
+  .card:hover { transform: none; }
+  div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+footer .wrap > p { font-size: 19px !important; } /* Bigger font for footer */
+
+/* Improved mobile responsiveness */
+@media (max-width: 600px) {
+  .hero-btns {
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 16px 20px !important;
+    font-size: 17px !important;
+  }
+  
+  #hero {
+    padding-top: 90px !important;
+    padding-bottom: 60px !important;
+  }
+  
+  h1 {
+    font-size: clamp(32px, 9vw, 48px) !important;
+    line-height: 1.1 !important;
+  }
+  
+  .log-box {
+    margin-top: 30px !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="nav-inner">
+      <a href="#" style="font-family:'Syne', sans-serif; font-weight:700; color:#fff; text-decoration:none; display:flex; align-items:center; gap:9px;">
+        <span style="width:8px; height:8px; background:var(--yellow); border-radius:50%; box-shadow: 0 0 10px var(--yellow); display:inline-block;"></span>
+        Silent Guardian
+      </a>
+      <div style="display:flex; gap:20px; align-items:center;">
+        <a href="#pricing" style="color:var(--gray2); text-decoration:none; font-size:16px;">Precios</a>
+        <a href="https://tally.so/r/7RJJz0" target="_blank" rel="noopener" class="btn-primary" style="padding:8px 18px; font-size:14px;">Probar gratis</a>
+        </div>
+    </div>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="wrap">
+    <div class="label">SaaS Reliability Engine</div>
+    <h1>
+      <span class="accent">Silent failures kill.</span><br>
+      ¿Cuánto más vas a perder por “todo OK”?
+    </h1>
+    <p style="font-size: var(--t-lg); color: var(--gray2); max-width: min(550px, 100%); margin-bottom: 32px;">
+      Incoming pagos? Your Stripe parece sano, tus dashboards verdes, pero el dinero no llega.<br>
+      Silent bugs en webhooks, APIs down, usuarios frustrados — y tu support team drowning en tickets imposibles.
+      <br><b>Basta de jugar “escondidas” con el revenue y la confianza de tus usuarios.</b>
+    </p>
+
+    <div class="hero-btns" style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 30px; flex-direction: column; align-items: stretch;">
+
+      <a href="https://tally.so/r/7RJJz0" target="_blank" rel="noopener" class="btn-primary" style="font-size: 17px; padding: 16px 24px; text-align: center;">
+
+        Probar gratis por 14 días
+
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+
+      </a>
+
+      <a href="https://github.com/niknizov0-prog" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="font-size: 16px; padding: 14px 24px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 9px;">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="vertical-align:-3px;">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.657 0 8.167c0 3.611 2.292 6.673 5.47 7.751.4.076.547-.179.547-.398 0-.197-.007-.718-.011-1.41-2.226.492-2.695-1.077-2.695-1.077-.364-.935-.89-1.185-.89-1.185-.728-.509.055-.499.055-.499.805.058 1.229.845 1.229.845.715 1.251 1.874.89 2.331.681.072-.526.279-.89.507-1.095-1.777-.205-3.645-.911-3.645-4.056 0-.896.314-1.628.827-2.201-.083-.206-.359-1.037.078-2.162 0 0 .674-.221 2.21.84A7.546 7.546 0 0 1 8 4.844c.683.003 1.372.093 2.015.273 1.536-1.061 2.209-.84 2.209-.84.438 1.125.162 1.956.08 2.162.515.573.827 1.305.827 2.201 0 3.152-1.87 3.849-3.65 4.051.288.255.544.759.544 1.532 0 1.106-.01 2-.01 2.27 0 .221.146.478.551.397C13.709 14.836 16 11.778 16 8.167 16 3.657 12.42 0 8 0Z" fill="#fff"/>
+        </svg>
+        Ver documentación
+
+      </a>
+
+    </div>
+
+    <!-- Trust strip (avatars + "+127 equipos") -->
+    <div class="trust-strip">
+      <div class="trust-avatars">
+
+        <img src="data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='14' fill='%232a1f4e'/%3E%3Ccircle cx='14' cy='11' r='4.5' fill='%237c6fcd'/%3E%3Cpath d='M5 24c0-5 4-8 9-8s9 3 9 8' fill='%237c6fcd'/%3E%3C/svg%3E" alt="user" width="28" height="28">
+
+        <img src="data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='14' fill='%231a3a2a'/%3E%3Ccircle cx='14' cy='11' r='4.5' fill='%234ade80'/%3E%3Cpath d='M5 24c0-5 4-8 9-8s9 3 9 8' fill='%234ade80'/%3E%3C/svg%3E" alt="user" width="28" height="28">
+
+        <img src="data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='14' fill='%233a1a1a'/%3E%3Ccircle cx='14' cy='11' r='4.5' fill='%23f87171'/%3E%3Cpath d='M5 24c0-5 4-8 9-8s9 3 9 8' fill='%23f87171'/%3E%3C/svg%3E" alt="user" width="28" height="28">
+
+        <img src="data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='14' fill='%231a2a3a'/%3E%3Ccircle cx='14' cy='11' r='4.5' fill='%2360a5fa'/%3E%3Cpath d='M5 24c0-5 4-8 9-8s9 3 9 8' fill='%2360a5fa'/%3E%3C/svg%3E" alt="user" width="28" height="28">
+
+        <img src="data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='14' cy='14' r='14' fill='%232a2a1a'/%3E%3Ccircle cx='14' cy='11' r='4.5' fill='%23facc15'/%3E%3Cpath d='M5 24c0-5 4-8 9-8s9 3 9 8' fill='%23facc15'/%3E%3C/svg%3E" alt="user" width="28" height="28">
+
+      </div>
+      <span class="trust-plus">+127 equipos confían</span>
+    </div>
+
+    <div class="log-box">
+      <div class="log-chrome">
+        <div class="log-dots"><span></span><span></span><span></span></div>
+        <span style="color:var(--gray3); font-size:12px; margin-left:8px;">sfg_monitor_live.log</span>
+      </div>
+      <div class="log-body" id="logBody"></div>
+    </div>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap reveal">
+    <div class="label">El Problema</div>
+    <h2>Cada fallo invisible <span class="accent">es dinero y reputación que se va.</span></h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px;">
+      <div class="card">
+        <div style="font-size:32px; margin-bottom:16px;">💸</div>
+        <h3>Depósitos Fantasma</h3>
+        <p style="color:var(--gray2);">Los fondos entran… y desaparecen. El cliente jura que pagó. Tu panel reporta éxito. Pero ese depósito jamás llegó. Revenue perdido, explicaciones imposibles.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:32px; margin-bottom:16px;">🧟</div>
+        <h3>Soporte al Límite</h3>
+        <p style="color:var(--gray2);">Tu equipo se ahoga en tickets: pagos que no aparecen, transferencias dudosas, procesos “ok” en dashboards pero caídos en la realidad. Credibilidad y energía drenadas.</p>
+      </div>
+      <div class="card">
+        <div style="font-size:32px; margin-bottom:16px;">📉</div>
+        <h3>Confianza Erosionada</h3>
+        <p style="color:var(--gray2);">Usuarios que se dan por vencidos. Abandonos invisibles porque nadie detecta el fallo — hasta que ya es tarde y pierdes clientes, dinero y prestigio.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS SECTION -->
+<section id="how-it-works" class="section-alt">
+  <div class="wrap reveal">
+    <div class="label">¿Cómo funciona?</div>
+    <h2 style="margin-bottom:38px;"><span class="accent">Tu operación segura</span> en 3 pasos simples</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap:30px;">
+      <div class="card" style="background: var(--bg3);">
+        <div style="font-size:30px; margin-bottom:14px;">🔌</div>
+        <h3>1. Ingresa tu endpoint clave</h3>
+        <p style="color:var(--gray2); font-size: 15px;">Pega la URL de tu webhook o API crítica. Sin integraciones complejas. Listo en segundos.</p>
+      </div>
+      <div class="card" style="background: var(--bg3);">
+        <div style="font-size:30px; margin-bottom:14px;">⚡️</div>
+        <h3>2. Elige lo esencial a vigilar</h3>
+        <p style="color:var(--gray2); font-size: 15px;">Selecciona qué quieres proteger: pagos, respuestas, procesos automáticos. Tan flexible como tu negocio requiere.</p>
+      </div>
+      <div class="card" style="background: var(--bg3);">
+        <div style="font-size:30px; margin-bottom:14px;">🚨</div>
+        <h3>3. Activa alertas en tiempo real</h3>
+        <p style="color:var(--gray2); font-size: 15px;">Recibe notificaciones inmediatas ante cualquier falla, por Slack, email o Telegram. Reacciona antes de perder clientes y dinero.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH SECTION -->
+<section id="tech">
+  <div class="wrap reveal">
+    <div class="label">Poder Tecnológico</div>
+    <h2><span class="accent">Ultra-preciso</span> y sin dolor</h2>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <span class="metric-value">&lt;120ms</span>
+        <span class="metric-label">Promedio de Detección</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-value">99.9%</span>
+        <span class="metric-label">SLA Tiempo Activo</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-value">0</span>
+        <span class="metric-label">Dependencias Cliente</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-value">REST</span>
+        <span class="metric-label">Integración Sencilla</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- URGENCY SECTION -->
+<section id="urgency" class="section-alt">
+  <div class="wrap reveal">
+    <div class="label">Tus Pérdidas ya Van en Silencio</div>
+    <h2>¿El <span class="accent">costo oculto</span>? Siempre subestimado.</h2>
+    <div class="urgency-block">
+      <div class="urgency-row">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.185 2.684a.75.75 0 0 0-1.37 0l-7 15A.75.75 0 0 0 2.5 19.5h15a.75.75 0 0 0 .685-1.064l-7-15ZM10 5.505l5.526 11.995h-11.05L10 5.505ZM9.25 14a.75.75 0 0 1 1.5 0v1a.75.75 0 0 1-1.5 0v-1Zm.75-6a.75.75 0 0 1 .75.75V12a.75.75 0 0 1-1.5 0V8.75A.75.75 0 0 1 10 8Z"></path></svg>
+        $411 USD perdidos en cobros No detectados (12 meses)
+      </div>
+      <div class="urgency-row">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M17 18a1 1 0 0 0 1-1v-2.18A3.001 3.001 0 0 0 17 10V7a7 7 0 1 0-14 0v3a3.001 3.001 0 0 0-1 4.82V17a1 1 0 0 0 1 1h14ZM4 7a6 6 0 1 1 12 0v3a1 1 0 0 0 1 1h0a1.001 1.001 0 0 1-2 0V8a1 1 0 0 0-2 0v3a1.001 1.001 0 0 1-2 0V7a1 1 0 1 0-2 0v3.001a1.001 1.001 0 0 1-2 0V7Z"></path></svg>
+        9 automatizaciones "zombi" / año
+      </div>
+      <div class="urgency-row">
+        <svg viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="10" r="9.2" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="10" cy="10" r="3" fill="currentColor"/></svg>
+        2.6% usuarios pierden onboarding por fallos ocultos
+      </div>
+      <div class="urgency-row urgency-highlight">
+        <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2C5.59 2 2 5.59 2 10s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8Zm0 14.5c-3.584 0-6.5-2.916-6.5-6.5s2.916-6.5 6.5-6.5 6.5 2.916 6.5 6.5-2.916 6.5-6.5 6.5ZM9 7h2v5h-2V7Zm0 6h2v2h-2v-2Z"></path></svg>
+        El costo real <b>NUNCA</b> se ve en tus logs.
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap reveal">
+    <div class="label">Early Access — Para Equipos Que No Pueden Perder</div>
+    <h2><span class="accent">Acceso anticipado</span> para equipos serios</h2>
+    <div class="pricing-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+      <!-- Plan Early Access Trial -->
+      <div class="plan-card card" style="border-color: var(--yellow);">
+        <h3 style="color:var(--yellow);">14 días gratis</h3>
+        <p style="color:var(--gray2); margin:12px 0 16px;">
+          Prueba completa con tu stack real.<br/>
+          Mini-auditoría personalizada: detectamos tus silent failures.<br/>
+          Soporte directo por expertos.
+        </p>
+        <p style="font-size:22px; font-weight:700; color:var(--white);">$0 <span style="font-size:13px; color:var(--gray2);">/ 14 días</span></p>
+        <a href="https://tally.so/r/7RJJz0" target="_blank" rel="noopener" class="btn-primary" style="margin-top:16px; font-size:16px;">Solicitar acceso Early</a>
+        <p style="font-size:12px; color:var(--gray3); margin-top:8px; text-align:center;">
+          Plazas limitadas para equipos que buscan impacto real.<br/>
+          Evaluamos cada proyecto — sin promesas vacías.
+        </p>
+      </div>
+      <!-- Plan Early Adopters -->
+      <div class="plan-card card pro" style="position:relative;">
+        <div class="plan-badge">SOLO PARA EARLY USERS</div>
+        <h3 style="color:var(--yellow);">Early Adopter</h3>
+        <p style="color:var(--gray2); margin:12px 0 16px;">
+          Todo el acceso + soporte cercano.<br/>
+          Precio especial de por vida para los primeros clientes.<br/>
+          Feedback directo — ayudamos a cerrar los silent failures que ahogan tu negocio.
+        </p>
+        <p style="font-size:22px; font-weight:700; color:var(--white);">$49 <span style="font-size:13px; color:var(--gray2);">/ mes</span></p>
+        <a href="https://tally.so/r/7RJJz0" target="_blank" rel="noopener" class="btn-primary" style="margin-top:16px; font-size:16px;">Aplicar — Early Access</a>
+        <p style="font-size:12px; color:var(--gray3); margin-top:8px; text-align:center;">
+          Buscamos equipos listos a tomar control de sus pérdidas ocultas.<br/>
+          Mini-auditoría incluida. Sin bullshit. Resultados o feedback sincero.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="padding:60px 0; border-top:1px solid var(--border); text-align:center;">
+  <div class="wrap">
+    <p style="color:var(--gray3); font-size:19px;">
+      © 2026 Silent Failure Guardian. Hecho para devs que valoran su tiempo. 🚀<br>
+      <a href="https://x.com/cybsurfer" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--gray3);">
+        <!-- Original Twitter X logo SVG below -->
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg">
+          <g>
+            <path d="M17.53 3.87H20.94L14.88 10.6L22 20.13H16.4L12.07 14.39L7.19 20.13H3.78L10.19 12.98L3.28 3.87H9.01L12.88 9.08L17.53 3.87ZM16.52 18.46H18.09L8.59 5.45H6.89L16.52 18.46Z" fill="#fff"/>
+          </g>
+        </svg>
+        @cybsurfer
+      </a>
+      <span style="margin:0 10px;">•</span>
+      <a href="mailto:niknizov0@gmail.com" style="text-decoration:none;color:var(--gray3);display:inline-flex;align-items:center;gap:6px;">
+        <span style="font-size:19px;vertical-align:middle;">📬</span>
+        niknizov0@gmail.com
+      </a>
+    </p>
+  </div>
+</footer>
+
+<script>
+/* Scroll Reveal */
+document.addEventListener('DOMContentLoaded', function() {
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('is-visible'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  /* Log Animation */
+  const lines = [
+    { time: '14:10', badge: 'OK',   cls: 'badge-ok',   msg: 'Webhook MercadoPago → 200 OK (78ms)' },
+    { time: '14:12', badge: 'FAIL', cls: 'badge-err',  msg: 'Webhook Stripe: Silent Drop detectado' },
+    { time: '14:12', badge: 'ALRT', cls: 'badge-ok',   msg: 'Alerta enviada a Slack #alerts' }
+  ];
+
+  async function startLog() {
+    const body = document.getElementById('logBody');
+    if (!body) return;
+    body.innerHTML = "";
+    for(const l of lines) {
+      await new Promise(r => setTimeout(r, 1000 + Math.random() * 500));
+      const d = document.createElement('div');
+      d.className = 'log-line';
+      d.innerHTML = `<span style="color:var(--gray3)">${l.time}</span> <span class="badge ${l.cls}">${l.badge}</span> <span style="color:var(--gray1)">${l.msg}</span>`;
+      body.appendChild(d);
+      setTimeout(() => d.classList.add('visible'), 50);
+
+      if(l.badge === 'FAIL') {
+        await new Promise(r => setTimeout(r, 400));
+        const alert = document.createElement('div');
+        alert.className = 'log-alert';
+        alert.textContent = '⚠️ ALERTA CRÍTICA: Pérdida estimada: $420 USD';
+        body.appendChild(alert);
+      }
+    }
+  }
+
+  const logBody = document.getElementById('logBody');
+  if (logBody) {
+    const logObs = new IntersectionObserver(entries => {
+      if(entries[0].isIntersecting) { startLog(); logObs.disconnect(); }
+    }, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+    logObs.observe(logBody);
+  }
+});
+</script>
+
+</body>
+</html>
